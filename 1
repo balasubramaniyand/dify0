@@ -1,0 +1,90 @@
+# HTTP server configuration
+server {
+    listen ${NGINX_PORT};
+    server_name ${NGINX_SERVER_NAME};
+
+    # Redirect HTTP to HTTPS if HTTPS is enabled
+    if (${NGINX_HTTPS_ENABLED} = true) {
+        return 301 https://$host$request_uri;
+    }
+
+    # Proxy requests
+    location / {
+        proxy_pass http://web:3000;
+        include proxy.conf;  # Include your standard proxy settings
+    }
+
+    location /api {
+        proxy_pass http://api:5001;
+        include proxy.conf;  # Include your standard proxy settings
+    }
+
+    location /console/api {
+        proxy_pass http://api:5001;
+        include proxy.conf;
+    }
+
+    location /v1 {
+        proxy_pass http://api:5001;
+        include proxy.conf;
+    }
+
+    location /files {
+        proxy_pass http://api:5001;
+        include proxy.conf;
+    }
+
+    # Enable ACME challenge for Let's Encrypt
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+}
+
+# HTTPS server configuration (if HTTPS is enabled)
+server {
+    listen ${NGINX_SSL_PORT} ssl;
+    server_name ${NGINX_SERVER_NAME};
+
+    # SSL certificates
+    ssl_certificate /etc/nginx/ssl/${NGINX_SSL_CERT_FILENAME};
+    ssl_certificate_key /etc/nginx/ssl/${NGINX_SSL_CERT_KEY_FILENAME};
+    ssl_protocols ${NGINX_SSL_PROTOCOLS};  # Use secure SSL protocols
+
+    # Proxy requests
+    location / {
+        proxy_pass http://web:3000;
+        include proxy.conf;  # Include your standard proxy settings
+    }
+
+    location /api {
+        proxy_pass http://api:5001;
+        include proxy.conf;  # Include your standard proxy settings
+    }
+
+    location /console/api {
+        proxy_pass http://api:5001;
+        include proxy.conf;
+    }
+
+    location /v1 {
+        proxy_pass http://api:5001;
+        include proxy.conf;
+    }
+
+    location /files {
+        proxy_pass http://api:5001;
+        include proxy.conf;
+    }
+
+    # Enable ACME challenge for Let's Encrypt
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    # Optional additional SSL security settings
+    ssl_prefer_server_ciphers on;
+    ssl_ciphers 'ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256';
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 10m;
+    ssl_dhparam /etc/nginx/ssl/dhparam.pem;  # Optional: Strong Diffie-Hellman parameters for enhanced security
+}
