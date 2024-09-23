@@ -1,0 +1,84 @@
+server {
+    listen 80;
+    server_name iflow.opexwise.ai;
+
+    # Redirect all HTTP requests to HTTPS
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name iflow.opexwise.ai;
+
+    # SSL Configuration
+    ssl_certificate /etc/ssl/certs/opexwise.crt;  # Update path to your certificate
+    ssl_certificate_key /etc/ssl/private/opexwise.key;
+    ssl_trusted_certificate /etc/ssl/certs/opexwise.chain.pem;
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+
+    # Security Headers
+    add_header X-Content-Type-Options nosniff;
+    add_header X-Frame-Options DENY;
+    add_header X-XSS-Protection "1; mode=block";
+    add_header Strict-Transport-Security "max-age=31536000; includeSubdomains; preload" always;
+
+    # Gzip Compression
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+    gzip_vary on;
+
+    # API Proxying
+    location /console/api {
+      proxy_pass http://api:5001;
+      include proxy.conf;
+      proxy_set_header Host $host;
+    }
+
+    location /api {
+      proxy_pass http://api:5001;
+      include proxy.conf;
+      proxy_set_header Host $host;
+    }
+
+    location /v1 {
+      proxy_pass http://api:5001;
+      include proxy.conf;
+      proxy_set_header Host $host;
+    }
+
+    location /files {
+      proxy_pass http://api:5001;
+      include proxy.conf;
+      proxy_set_header Host $host;
+    }
+
+    # Frontend Proxying
+    location / {
+      proxy_pass http://web:3000;
+      include proxy.conf;
+      proxy_set_header Host $host;
+    }
+
+    # ACME Challenge for Let's Encrypt (if applicable)
+    location /.well-known/acme-challenge/ {
+      root /var/www/certbot;
+    }
+
+    # Error pages
+    error_page 500 502 503 504 /50x.html;
+    location = /50x.html {
+        root /usr/share/nginx/html;
+    }
+
+    # Rate limiting (optional)
+    limit_req_zone $binary_remote_addr zone=mylimit:10m rate=10r/s;
+
+    location / {
+        limit_req zone=mylimit;
+        proxy_pass http://web:3000;
+        include proxy.conf;
+    }
+}
