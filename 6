@@ -1,0 +1,66 @@
+root@superset:~/nginx# ls
+1  certs  docker-compose.yml  nginx.conf  nginxlogs  proxy.conf  sep20-nginx.conf
+root@superset:~/nginx# docker-compose logs -f
+nginx-nginx-1  | /docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration
+nginx-nginx-1  | /docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/
+nginx-nginx-1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh
+nginx-nginx-1  | 10-listen-on-ipv6-by-default.sh: info: Getting the checksum of /etc/nginx/conf.d/default.conf
+nginx-nginx-1  | 10-listen-on-ipv6-by-default.sh: info: Enabled listen on IPv6 in /etc/nginx/conf.d/default.conf
+nginx-nginx-1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/20-envsubst-on-templates.sh
+nginx-nginx-1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/30-tune-worker-processes.sh
+^Ccanceled
+root@superset:~/nginx# cat nginx.conf
+http {
+    server {
+        listen 80;
+        server_name iflow.opexwise.ai;
+
+        # Redirect all HTTP requests to HTTPS
+        return 301 https://$host$request_uri;
+    }
+
+    server {
+        listen 443 ssl;
+        server_name iflow.opexwise.ai;
+
+        # SSL configuration
+        ssl_certificate /path/to/your/fullchain.pem;  # Update with your certificate path
+        ssl_certificate_key /path/to/your/privkey.pem; # Update with your private key path
+
+        # Optional: Improve security with these settings
+        ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_ciphers 'HIGH:!aNULL:!MD5';
+        ssl_prefer_server_ciphers on;
+
+        location /console/api {
+            proxy_pass http://api:5001;
+            include proxy.conf;
+        }
+
+        location /api {
+            proxy_pass http://api:5001;
+            include proxy.conf;
+        }
+
+        location /v1 {
+            proxy_pass http://api:5001;
+            include proxy.conf;
+        }
+
+        location /files {
+            proxy_pass http://api:5001;
+            include proxy.conf;
+        }
+
+        location / {
+            proxy_pass http://web:3000;
+            include proxy.conf;
+        }
+
+        # Placeholder for ACME challenge location
+        location /.well-known/acme-challenge/ { 
+            root /var/www/html; 
+        }
+    }
+}
+roo
